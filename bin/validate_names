@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+import json
+import sys
+from optparse import OptionParser
+
+def validate_names(data):
+	for subject in data:
+		for word in subject["words"]:
+			if word["modern_usage"].find("-") < -1:
+				print word
+
+def option_parser():
+	usage = "usage: %prog"
+	parser = OptionParser(usage=usage)
+	return parser
+
+def main():
+	parser = option_parser()
+	(options, args) = parser.parse_args()
+	new = "".join(sys.stdin.readlines())
+	validate_names(json.loads(new))
+
+if __name__ == '__main__':
+	main()
+

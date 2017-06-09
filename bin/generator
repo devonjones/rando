@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+import json
+import sys
+from optparse import OptionParser
+from rando.meaning import load_meanings
+from rando.name import load_names
+from rando.proportions import load_proportions
+
+def option_parser():
+	usage = "usage: %prog [meanings file] [probabilities file]"
+	parser = OptionParser(usage=usage)
+	parser.add_option("-t", "--tag", action="append", dest="tags")
+	return parser
+
+def tag_check(tags, tag_db):
+	for tag in tags:
+		if not tag in tag_db:
+			tag_list = tag_db.keys()
+			tag_list.sort()
+			tag_list.remove("male name")
+			tag_list.remove("female name")
+			tag_list.remove("saint")
+			print >> sys.stderr, "Tag: %s not found" % tag
+			print >> sys.stderr
+			for t in tag_list:
+				print >> sys.stderr, t
+			sys.exit(1)
+
+def main():
+	parser = option_parser()
+	(options, args) = parser.parse_args()
+	meanings = json.load(open(args[0]))
+	proportions = json.load(open(args[1]))
+	meaning_db, tag_db = load_meanings(meanings)
+	name_gen = load_proportions(proportions, meaning_db, tag_db)
+	tags = options.tags
+	if not tags:
+		tags = []
+	tag_check(tags, tag_db)
+	s = name_gen.select(*tags)
+	print s
+	print s.description()
+
+if __name__ == '__main__':
+	main()
+

@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+import json
+import sys
+
+from optparse import OptionParser
+from collections import Counter
+from rando.meaning import load_meanings
+from rando.name import load_names
+
+def deconstruct_names(names, word_db):
+	retval = []
+	counter = 0
+	word_names = 0
+	word_saints = 0
+	for name in names:
+		name.find_meaning(word_db)
+		if name.has_name():
+			word_names += 1
+		if name.has_saint():
+			word_saints += 1
+		if name.count_unaccounted() == 0:
+			counter += 1
+			retval.append(name)
+		else:
+			pass
+	print >> sys.stderr, "Perfect: %s, names: %s, saints: %s, total: %s" % (counter, word_names, word_saints, len(names)) 
+	return retval
+
+def set_proportions(names):
+	part_proportions = Counter()
+	lone_proportions = Counter()
+	struct_proportions = Counter()
+	for name in names:
+		for u in name.get_samples():
+			part_proportions[u] += 1
+		for u in name.get_lone_samples():
+			lone_proportions[u] += 1
+		for structure in name.get_structure():
+			struct_proportions[structure] += 1
+	return {'usages': part_proportions, 'single_usages': lone_proportions, 'structures': encode_structs(struct_proportions)}
+
+def encode_structs(struct):
+	structs = []
+	for key, value in struct.items():
+		newstruct = {"proportion": value}
+		words = []
+		for word in key:
+			w = []
+			for meaning in word:
+				m = {}
+				for quality in meaning:
+					if quality in ['pre', 'post', 'inner']:
+						m["location"] = quality
+					else:
+						m[quality] = True
+				w.append(m)
+			words.append(w)
+		newstruct["words"] = words
+		structs.append(newstruct)
+	return structs
+
+def option_parser():
+	usage = "usage: %prog"
+	parser = OptionParser(usage=usage)
+	return parser
+
+def main():
+	parser = option_parser()
+	(options, args) = parser.parse_args()
+	names = json.load(open(args[0]))
+	parts = json.load(open(args[1]))
+	names = load_names(names)
+	word_db, _ = load_meanings(parts)
+	good_names = deconstruct_names(names, word_db)
+	proportions = set_proportions(good_names)
+	print json.dumps(proportions)
+
+if __name__ == '__main__':
+	main()
+
